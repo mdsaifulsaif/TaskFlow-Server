@@ -1,0 +1,275 @@
+# 🚀 TaskFlow Pro – Advanced Backend Project Plan
+
+(Express + TypeScript + PostgreSQL | Clean Architecture | Raw SQL)
+
+---
+
+## 🧭 1. Project Overview
+
+TaskFlow Pro একটি এন্টারপ্রাইজ-গ্রেড প্রজেক্ট ম্যানেজমেন্ট সিস্টেম যেখানে ইউজাররা টিমে কাজ করতে পারবে, টাস্ক ট্র্যাক করতে পারবে এবং রিয়েল-টাইম অ্যাক্টিভিটি মনিটর করতে পারবে।
+
+এই সিস্টেমে থাকবে:
+
+* 👤 User Dashboard
+* 🧑‍💼 Admin Dashboard
+* 🧑‍💻 Manager Dashboard
+* 📊 Performance & Analytics System
+* 💬 Feedback System
+
+---
+
+## 🏗️ 2. Tech Stack
+
+* Runtime: Node.js
+* Language: TypeScript
+* Framework: Express.js
+* Database: PostgreSQL (using pg driver)
+* Auth: JWT (Access & Refresh Tokens)
+* Security: Bcrypt (Hashing), CORS, Helmet
+* Validation: Zod
+* Logging: Winston or Morgan
+
+---
+
+## 📁 3. Scalable Folder Structure (Feature-Based)
+
+```
+src/
+├── app.ts
+├── server.ts
+├── config/
+├── middleware/
+├── utils/
+├── modules/
+│   ├── auth/
+│   ├── user/
+│   ├── project/
+│   ├── board/
+│   ├── task/
+│   ├── activity/
+│   ├── analytics/
+│   ├── feedback/
+│   └── dashboard/        # NEW: role-based dashboards
+└── shared/
+```
+
+---
+
+## 👥 4. Role System (Core Concept)
+
+এই সিস্টেমে ৩ ধরনের ইউজার থাকবে:
+
+### 🧑 User (Member)
+
+* নিজের assigned task দেখতে পারবে
+* task update করতে পারবে
+* feedback দেখতে পারবে
+* নিজের performance dashboard দেখতে পারবে
+
+---
+
+### 🧑‍💻 Manager
+
+* নিজের team / project manage করবে
+* task assign করতে পারবে
+* feedback দিতে পারবে
+* team performance দেখতে পারবে
+* analytics access থাকবে
+
+---
+
+### 🧑‍💼 Admin
+
+* full system control
+* সব project access
+* user management (create/block/delete)
+* global analytics dashboard
+* system performance monitoring
+
+---
+
+## 📊 5. Dashboard System (VERY IMPORTANT)
+
+---
+
+## 👤 User Dashboard
+
+User নিজের personal performance দেখতে পারবে:
+
+* 📌 Assigned Tasks
+* ✅ Completed Tasks
+* ❌ Failed / Pending Tasks
+* 📈 Monthly Progress Chart
+* 🧠 Productivity Score
+* 💬 Received Feedback
+
+👉 Goal: "Amar performance kemon cholche"
+
+---
+
+## 🧑‍💻 Manager Dashboard
+
+Manager team level control পাবে:
+
+* 👥 Team Members List
+* 📋 Project Overview
+* 📊 Team Performance Ratio
+* 🎯 Task Assignment Status
+* 💬 Task Feedback System
+* 📈 Member-wise Success Rate
+
+👉 Goal: "Amar team kemon kaj kortese"
+
+---
+
+## 🧑‍💼 Admin Dashboard
+
+Admin full system control পাবে:
+
+* 👤 Total Users (Active / Blocked)
+* 🏢 Total Projects
+* 📊 Global Success vs Failed Ratio
+* 📈 Monthly System Performance
+* 🔥 Top Performing Users
+* ⚠️ Low Performing Users
+* 🧠 System Activity Logs
+
+👉 Goal: "System overall kemon cholche"
+
+---
+
+## 🗄️ 6. Advanced Database Design (SQL Only)
+
+### 👤 users
+
+id, name, email, password, role, is_active, last_login, created_at
+
+### 🏢 projects
+
+id, title, description, owner_id, slug, is_deleted, created_at
+
+### 👥 project_members
+
+project_id, user_id, role, joined_at
+
+### 📋 boards
+
+id, name, project_id, order_index
+
+### ✅ tasks
+
+id, title, description, status, priority, board_id, creator_id, assigned_to, due_date, created_at
+
+### 📝 activity_logs
+
+id, action, entity_type, entity_id, user_id, details, created_at
+
+### 📊 user_monthly_performance
+
+id, user_id, month, total_tasks, completed_tasks, failed_tasks, success_rate, productivity_score
+
+### 💬 task_feedbacks
+
+id, task_id, user_id, given_by, rating, comment, created_at
+
+---
+
+## 🧠 7. Dashboard Logic Flow
+
+### User Dashboard Logic
+
+* Assigned tasks fetch
+* Completed vs pending calculation
+* Monthly aggregation query
+
+### Manager Dashboard Logic
+
+* Team-based filtering
+* Project-wise aggregation
+* Member performance breakdown
+
+### Admin Dashboard Logic
+
+* Global aggregation queries
+* System-wide analytics
+* User ranking system
+
+---
+
+## 🪜 8. Step-by-Step Development Phases
+
+### 🟢 Phase 1 – Core Setup
+
+* Express + TypeScript
+* PostgreSQL connection
+* JWT Auth
+* Role system setup
+
+---
+
+### 🟡 Phase 2 – Project System
+
+* Projects CRUD
+* Member management
+
+---
+
+### 🟠 Phase 3 – Task System
+
+* Boards + Tasks
+* Assignment system
+* Status tracking
+
+---
+
+### 🔵 Phase 4 – Dashboard System (NEW)
+
+* User dashboard APIs
+* Manager dashboard APIs
+* Admin dashboard APIs
+
+---
+
+### 🟣 Phase 5 – Analytics System
+
+* Performance calculation
+* Success/fail ratio
+* Monthly reports
+
+---
+
+### 🔴 Phase 6 – Feedback System
+
+* Task feedback
+* Rating system
+* Manager review system
+
+---
+
+## 🔐 9. Security Flow
+
+* JWT authentication
+* Role-based authorization middleware
+* Zod validation
+* Secure SQL queries
+
+---
+
+## 🧱 10. Architecture Pattern
+
+Controller → Service → Repository (Raw SQL) → PostgreSQL
+
+---
+
+## 🔥 FINAL GOAL
+
+TaskFlow Pro হবে একটি:
+
+* SaaS-level project management system
+* Role-based dashboard system
+* Analytics-driven productivity platform
+* Fully scalable enterprise backend
+
+---
+
+🚀 Build step by step like a real production system.
