@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import { pool } from "../../../config/db";
 import { generateAccessToken, generateRefreshToken } from "../../../utils/jwt";
-import { TAuthResponse } from "../../../types/auth.type";
 import { ApiError } from "../../../errors/ApiError";
 
 export const registerUser = async (
@@ -9,35 +8,55 @@ export const registerUser = async (
   email: string,
   password: string,
 ) => {
-  const hashed = await bcrypt.hash(password, 10);
+  const client = await pool.connect(); // Transaction 
+  try {
+    await client.query('BEGIN'); // Start Transaction
+    
+    const hashed = await bcrypt.hash(password, 10);
 
-  const result = await pool.query(
-    "INSERT INTO users (name, email, password) VALUES ($1,$2,$3) RETURNING *",
-    [name, email, hashed],
-  );
+    // 1. User table a data inserc
+    const userResult = await client.query(
+      "INSERT INTO users (name, email, password) VALUES ($1,$2,$3) RETURNING id, name, email, role",
+      [name, email, hashed],
+    );
 
-  return result.rows[0];
+    const userId = userResult.rows[0].id;
+
+    // 2. Employee table update and sbaki data profile update a hobe
+    await client.query(
+      "INSERT INTO employees (user_id, base_salary) VALUES ($1, $2)",
+      [userId, 0] // salary defatult 0 
+    );
+
+    await client.query('COMMIT'); // all data thik thakle save hobe
+    return userResult.rows[0];
+
+  } catch (error) {
+    await client.query('ROLLBACK'); // vull hole cancle
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
-export const loginUser = async (
-  email: string,
-  password: string,
-): Promise<TAuthResponse> => {
+export const loginUser = async (email: string, password: string) => {
+ 
   const user = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
 
   if (user.rows.length === 0) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(401, "Invalid credentials");
   }
 
   const valid = await bcrypt.compare(password, user.rows[0].password);
 
   if (!valid) {
-    throw new ApiError(404, "Invalid password");
+    throw new ApiError(401, "Invalid credentials");
   }
 
   const payload = {
     id: user.rows[0].id,
     email: user.rows[0].email,
+    role: user.rows[0].role, 
   };
 
   const accessToken = generateAccessToken(payload);

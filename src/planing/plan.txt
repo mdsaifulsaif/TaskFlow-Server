@@ -1,39 +1,30 @@
-# 🚀 TaskFlow Pro – Advanced Backend Project Plan
+🚀 HRFlow Pro – Advanced Backend Project Plan
 
-(Express + TypeScript + PostgreSQL | Clean Architecture | Raw SQL)
+(Express + TypeScript + PostgreSQL | Clean Architecture | HR Management System)
 
----
+🧭 1. Project Overview
 
-## 🧭 1. Project Overview
-
-TaskFlow Pro একটি এন্টারপ্রাইজ-গ্রেড প্রজেক্ট ম্যানেজমেন্ট সিস্টেম যেখানে ইউজাররা টিমে কাজ করতে পারবে, টাস্ক ট্র্যাক করতে পারবে এবং রিয়েল-টাইম অ্যাক্টিভিটি মনিটর করতে পারবে।
+HRFlow Pro একটি complete HR & Employee Management System যেখানে company তাদের employee, attendance, leave, salary, notice এবং performance manage করতে পারবে।
 
 এই সিস্টেমে থাকবে:
 
-* 👤 User Dashboard
-* 🧑‍💼 Admin Dashboard
-* 🧑‍💻 Manager Dashboard
-* 📊 Performance & Analytics System
-* 💬 Feedback System
+👤 Employee Dashboard
+🧑‍💼 Admin Dashboard
+🧑‍💻 HR Manager Dashboard
+📊 Payroll & Analytics System
+📢 Notice & Announcement System
 
----
+🏗️ 2. Tech Stack
+Runtime: Node.js
+Language: TypeScript
+Framework: Express.js
+Database: PostgreSQL (pg driver / raw SQL)
+Auth: JWT (Access + Refresh Token)
+Security: Bcrypt, CORS, Helmet
+Validation: Zod
+Logging: Winston / Morgan
 
-## 🏗️ 2. Tech Stack
-
-* Runtime: Node.js
-* Language: TypeScript
-* Framework: Express.js
-* Database: PostgreSQL (using pg driver)
-* Auth: JWT (Access & Refresh Tokens)
-* Security: Bcrypt (Hashing), CORS, Helmet
-* Validation: Zod
-* Logging: Winston or Morgan
-
----
-
-## 📁 3. Scalable Folder Structure (Feature-Based)
-
-```
+📁 3. Scalable Folder Structure (Feature-Based)
 src/
 ├── app.ts
 ├── server.ts
@@ -43,233 +34,140 @@ src/
 ├── modules/
 │   ├── auth/
 │   ├── user/
-│   ├── project/
-│   ├── board/
-│   ├── task/
-│   ├── activity/
-│   ├── analytics/
-│   ├── feedback/
-│   └── dashboard/        # NEW: role-based dashboards
+│   ├── employee/
+│   ├── department/
+│   ├── attendance/
+│   ├── leave/
+│   ├── payroll/
+│   ├── notice/
+│   └── dashboard/
 └── shared/
-```
-
----
-
-## 👥 4. Role System (Core Concept)
-
-এই সিস্টেমে ৩ ধরনের ইউজার থাকবে:
-
-### 🧑 User (Member)
-
-* নিজের assigned task দেখতে পারবে
-* task update করতে পারবে
-* feedback দেখতে পারবে
-* নিজের performance dashboard দেখতে পারবে
-
----
-
-### 🧑‍💻 Manager
-
-* নিজের team / project manage করবে
-* task assign করতে পারবে
-* feedback দিতে পারবে
-* team performance দেখতে পারবে
-* analytics access থাকবে
-
----
-
-### 🧑‍💼 Admin
-
-* full system control
-* সব project access
-* user management (create/block/delete)
-* global analytics dashboard
-* system performance monitoring
-
----
-
-## 📊 5. Dashboard System (VERY IMPORTANT)
-
----
-
-## 👤 User Dashboard
-
-User নিজের personal performance দেখতে পারবে:
-
-* 📌 Assigned Tasks
-* ✅ Completed Tasks
-* ❌ Failed / Pending Tasks
-* 📈 Monthly Progress Chart
-* 🧠 Productivity Score
-* 💬 Received Feedback
-
-👉 Goal: "Amar performance kemon cholche"
-
----
-
-## 🧑‍💻 Manager Dashboard
-
-Manager team level control পাবে:
-
-* 👥 Team Members List
-* 📋 Project Overview
-* 📊 Team Performance Ratio
-* 🎯 Task Assignment Status
-* 💬 Task Feedback System
-* 📈 Member-wise Success Rate
-
-👉 Goal: "Amar team kemon kaj kortese"
-
----
-
-## 🧑‍💼 Admin Dashboard
-
-Admin full system control পাবে:
-
-* 👤 Total Users (Active / Blocked)
-* 🏢 Total Projects
-* 📊 Global Success vs Failed Ratio
-* 📈 Monthly System Performance
-* 🔥 Top Performing Users
-* ⚠️ Low Performing Users
-* 🧠 System Activity Logs
-
-👉 Goal: "System overall kemon cholche"
-
----
-
-## 🗄️ 6. Advanced Database Design (SQL Only)
-
-### 👤 users
-
-id, name, email, password, role, is_active, last_login, created_at
-
-### 🏢 projects
-
-id, title, description, owner_id, slug, is_deleted, created_at
-
-### 👥 project_members
-
-project_id, user_id, role, joined_at
-
-### 📋 boards
-
-id, name, project_id, order_index
-
-### ✅ tasks
-
-id, title, description, status, priority, board_id, creator_id, assigned_to, due_date, created_at
-
-### 📝 activity_logs
-
-id, action, entity_type, entity_id, user_id, details, created_at
-
-### 📊 user_monthly_performance
-
-id, user_id, month, total_tasks, completed_tasks, failed_tasks, success_rate, productivity_score
-
-### 💬 task_feedbacks
-
-id, task_id, user_id, given_by, rating, comment, created_at
-
----
-
-## 🧠 7. Dashboard Logic Flow
-
-### User Dashboard Logic
-
-* Assigned tasks fetch
-* Completed vs pending calculation
-* Monthly aggregation query
-
-### Manager Dashboard Logic
-
-* Team-based filtering
-* Project-wise aggregation
-* Member performance breakdown
-
-### Admin Dashboard Logic
-
-* Global aggregation queries
-* System-wide analytics
-* User ranking system
-
----
-
-## 🪜 8. Step-by-Step Development Phases
-
-### 🟢 Phase 1 – Core Setup
-
-* Express + TypeScript
-* PostgreSQL connection
-* JWT Auth
-* Role system setup
-
----
-
-### 🟡 Phase 2 – Project System
-
-* Projects CRUD
-* Member management
-
----
-
-### 🟠 Phase 3 – Task System
-
-* Boards + Tasks
-* Assignment system
-* Status tracking
-
----
-
-### 🔵 Phase 4 – Dashboard System (NEW)
-
-* User dashboard APIs
-* Manager dashboard APIs
-* Admin dashboard APIs
-
----
-
-### 🟣 Phase 5 – Analytics System
-
-* Performance calculation
-* Success/fail ratio
-* Monthly reports
-
----
-
-### 🔴 Phase 6 – Feedback System
-
-* Task feedback
-* Rating system
-* Manager review system
-
----
-
-## 🔐 9. Security Flow
-
-* JWT authentication
-* Role-based authorization middleware
-* Zod validation
-* Secure SQL queries
-
----
-
-## 🧱 10. Architecture Pattern
+👥 4. Role System (Core Concept)
+
+👤 Employee
+নিজের profile দেখতে পারবে
+attendance check-in / check-out
+leave apply
+salary history দেখতে পারবে
+notice দেখতে পারবে
+🧑‍💻 HR Manager
+employee manage
+leave approve / reject
+attendance monitor
+notice publish
+payroll manage
+🧑‍💼 Admin
+full system control
+user/employee management
+global reports
+payroll overview
+system analytics
+
+📊 5. Dashboard System (VERY IMPORTANT)
+👤 Employee Dashboard
+📅 Today Attendance Status
+📊 Monthly Attendance
+💰 Salary History
+📝 Leave Status
+📢 Latest Notices
+
+👉 Goal: "Amar job status ki & performance kemon"
+
+🧑‍💻 HR Dashboard
+👥 Total Employees
+📋 Leave Requests
+🕒 Daily Attendance Overview
+📢 Manage Notices
+💰 Payroll Processing
+
+👉 Goal: "Company operations smoothly cholche kina"
+
+🧑‍💼 Admin Dashboard
+👤 Total Employees
+📊 Attendance রিপোর্ট
+💰 Salary Distribution
+📈 Monthly Analytics
+🔥 Active vs Inactive Users
+
+👉 Goal: "Company overall performance"
+
+🗄️ 6. Database Design (PostgreSQL)
+👤 users
+id, name, email, password, role, is_active, created_at
+🧑‍💼 employees
+id, user_id, phone, department_id, designation, salary, join_date
+🏢 departments
+id, name
+🕒 attendance
+id, employee_id, check_in, check_out, date, status
+📝 leaves
+id, employee_id, type, start_date, end_date, status
+💰 payrolls
+id, employee_id, month, base_salary, bonus, deduction, total_salary
+📢 notices
+id, title, description, created_by, created_at
+🧠 7. Dashboard Logic Flow
+Employee Dashboard Logic
+attendance summary query
+leave status fetch
+salary history query
+HR Dashboard Logic
+pending leaves aggregation
+daily attendance রিপোর্ট
+employee count
+Admin Dashboard Logic
+global stats query
+payroll summary
+active/inactive user count
+🪜 8. Step-by-Step Development Phases
+🟢 Phase 1 – Core Setup
+Express + TS setup
+PostgreSQL connection
+JWT Auth ✅
+Role middleware
+🟡 Phase 2 – Employee System
+Employee CRUD
+Department setup
+🟠 Phase 3 – Attendance System
+Check-in / Check-out
+Daily tracking
+🔵 Phase 4 – Leave System
+Apply leave
+Approve / Reject
+🟣 Phase 5 – Payroll System
+salary calculation
+monthly payroll
+🔴 Phase 6 – Notice System
+create notice
+public view
+⚫ Phase 7 – Dashboard System
+employee dashboard
+HR dashboard
+admin dashboard
+🔐 9. Security Flow
+JWT authentication
+Role-based authorization
+Input validation (Zod)
+Secure SQL queries
+🧱 10. Architecture Pattern
 
 Controller → Service → Repository (Raw SQL) → PostgreSQL
 
----
+🔥 FINAL GOAL
 
-## 🔥 FINAL GOAL
+HRFlow Pro হবে একটি:
 
-TaskFlow Pro হবে একটি:
+🏢 Company-ready HR system
+📊 Analytics-driven dashboard
+🔐 Secure role-based backend
+⚡ Scalable production system
+🎯 তোমার NEXT STEP
 
-* SaaS-level project management system
-* Role-based dashboard system
-* Analytics-driven productivity platform
-* Fully scalable enterprise backend
+👉 এখনই শুরু করো:
 
----
+Employee Module + Department System build করো
+(এটাই পুরো system এর base)
 
-🚀 Build step by step like a real production system.
+চাও হলে next এ আমি তোমাকে
+👉 
+exact SQL schema + query + API implementation (Express + TS) লিখে দিতে পারি — production level 🔥
