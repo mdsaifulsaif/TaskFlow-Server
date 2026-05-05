@@ -27,14 +27,15 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS departments (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    department_id INT REFERENCES departments(id),
+    department_id UUID REFERENCES departments(id),
     designation VARCHAR(100),
     phone VARCHAR(20),
     base_salary DECIMAL(12, 2) NOT NULL,

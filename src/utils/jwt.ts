@@ -3,7 +3,7 @@ import { TJwtPayload } from "../types/auth.type";
 
 export const generateAccessToken = (payload: TJwtPayload) => {
   return jwt.sign(payload, process.env.JWT_ACCESS_SECRET as string, {
-    expiresIn: "15m",
+    expiresIn: "1d",
   });
 };
 
