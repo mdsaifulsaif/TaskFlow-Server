@@ -9,7 +9,7 @@ const createEmployeeIntoDB = async (payload: any) => {
   try {
     await client.query("BEGIN");
 
-    // ১. পাসওয়ার্ড হ্যাশ করা
+    // password has
     const hashedPassword = await bcrypt.hash(
       payload.password,
       Number(config.bcrypt_salt_rounds),
@@ -62,6 +62,17 @@ const createEmployeeIntoDB = async (payload: any) => {
   }
 };
 
+const getAllEmployeeDB = async()=>{
+
+  const query = `
+   SELECT e. FROM employees as e left JOIN users as u
+  `
+
+  const result = await pool.query(query)
+  return result.rows
+}
+
 export const EmployeeService = {
   createEmployeeIntoDB,
+  getAllEmployeeDB
 };
