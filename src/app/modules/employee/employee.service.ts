@@ -15,7 +15,7 @@ const createEmployeeIntoDB = async (payload: any) => {
       Number(config.bcrypt_salt_rounds),
     );
 
-    // ২. Users টেবিলে ডাটা ইনসার্ট
+    // user table a data insert
     const userInsertQuery = `
       INSERT INTO users (name, email, password, role) 
       VALUES ($1, $2, $3, $4) 
@@ -30,7 +30,7 @@ const createEmployeeIntoDB = async (payload: any) => {
 
     const userId = newUser.rows[0].id;
 
-    // ৩. Employees টেবিলে ডাটা ইনসার্ট
+    //  Employees table a data insert
     const employeeInsertQuery = `
       INSERT INTO employees (user_id, department_id, designation, phone, base_salary) 
       VALUES ($1, $2, $3, $4, $5) 
@@ -52,7 +52,7 @@ const createEmployeeIntoDB = async (payload: any) => {
     };
   } catch (error: any) {
     await client.query("ROLLBACK");
-    // Duplicate Email চেক
+    // Duplicate Email চ
     if (error.code === "23505") {
       throw new ApiError(400, "Email already exists!");
     }
@@ -62,17 +62,53 @@ const createEmployeeIntoDB = async (payload: any) => {
   }
 };
 
-const getAllEmployeeDB = async()=>{
+
+const getAllEmployeeDB = async (page: number, limit: number) => {
+  const offset = (page - 1) * limit;
+
 
   const query = `
-   SELECT e. FROM employees as e left JOIN users as u
-  `
+    SELECT 
+      e.id,
+      u.name,
+      u.email,
+      u.role,
+      d.name AS department_name,
+      e.designation,
+      e.phone,
+      e.base_salary,
+      e.join_date
+    FROM employees e
+    JOIN users u ON e.user_id = u.id
+    LEFT JOIN departments d ON e.department_id = d.id
+    ORDER BY e.created_at DESC
+    LIMIT $1 OFFSET $2;
+  `;
 
-  const result = await pool.query(query)
-  return result.rows
-}
+ 
+  const countQuery = `SELECT COUNT(*) FROM employees`;
+
+
+  const [result, countResult] = await Promise.all([
+    pool.query(query, [limit, offset]), // $1 = limit, $2 = offset
+    pool.query(countQuery)
+  ]);
+
+  const totalData = parseInt(countResult.rows[0].count);
+  const totalPages = Math.ceil(totalData / limit);
+
+  return {
+    meta: {
+      page,
+      limit,
+      totalData,
+      totalPages
+    },
+    data: result.rows
+  };
+};
 
 export const EmployeeService = {
   createEmployeeIntoDB,
-  getAllEmployeeDB
+  getAllEmployeeDB,
 };
