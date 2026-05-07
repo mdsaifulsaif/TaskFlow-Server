@@ -1,6 +1,6 @@
 import { Response } from "express";
 
-// মেটা ডেটার জন্য একটি টাইপ ডিফাইন করা
+
 type TMeta = {
   page: number;
   limit: number;
@@ -11,7 +11,7 @@ type TMeta = {
 type TResponse<T> = {
   success: boolean;
   message?: string;
-  meta?: TMeta; // এখানে meta যুক্ত করা হলো
+  meta?: TMeta; 
   data?: T;
 };
 
@@ -23,7 +23,7 @@ export const sendResponse = <T>(
   res.status(statusCode).json({
     success: data.success,
     message: data.message,
-    meta: data.meta || null, // যদি meta থাকে তবে দেখাবে, না থাকলে null বা ইগনোর করবে
+    meta: data.meta || null, 
     data: data.data,
   });
 };

@@ -55,20 +55,27 @@ const checkoutAttendanceDB = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyAttendanceDB = catchAsync(async (req: Request, res: Response) => {
-  const { employeeId } = req.params; // ইউআরএল থেকে আইডি নেওয়া হবে
+  const { employeeId } = req.params;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
+  
+
+//   query paramiter theke date filter data niya
+  const startDate = req.query.startDate as string; 
+  const endDate = req.query.endDate as string;
 
   const result = await attendanceService.getAllAttendanceByEmployeeFromDB(
     employeeId as string,
     page,
-    limit
+    limit,
+    startDate,
+    endDate
   );
 
   sendResponse(res, 200, {
     success: true,
     message: "Attendance history fetched successfully",
-    meta: result.meta ,
+    meta: result.meta,
     data: result.data,
   });
 });

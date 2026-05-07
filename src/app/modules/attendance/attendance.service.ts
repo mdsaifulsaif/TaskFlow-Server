@@ -1,8 +1,6 @@
 import { pool } from "../../../config/db";
 import { getDistanceInMeters } from "../../../utils/geoDistance";
 
-// const OFFICE_LOCATION = { lat: 23.8103, lon: 90.4125 };
-
 const markAttendance = async (
   employeeId: string,
   lat: number,
@@ -132,17 +130,28 @@ const getAllAttendanceByEmployeeFromDB = async (
   employeeId: string,
   page: number,
   limit: number,
+  startDate?: string,
+  endDate?: string
 ) => {
   const offset = (page - 1) * limit;
+  const defaultStartDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  const defaultEndDate = new Date().toISOString().split('T')[0];
 
+  const start = startDate || defaultStartDate;
+  const end = endDate || defaultEndDate;
   const result = await pool.query(
-    `SELECT * FROM attendance WHERE employee_id = $1 ORDER BY date DESC LIMIT $2 OFFSET $3`,
-    [employeeId, limit, offset],
+    `SELECT * FROM attendance 
+     WHERE employee_id = $1 
+     AND date >= $2 AND date <= $3 
+     ORDER BY date DESC LIMIT $4 OFFSET $5`,
+    [employeeId, start, end, limit, offset],
   );
 
   const totalResult = await pool.query(
-    "SELECT COUNT(*) FROM attendance WHERE employee_id = $1",
-    [employeeId],
+    `SELECT COUNT(*) FROM attendance 
+     WHERE employee_id = $1 
+     AND date >= $2 AND date <= $3`,
+    [employeeId, start, end],
   );
 
   const total = parseInt(totalResult.rows[0].count);
@@ -152,7 +161,7 @@ const getAllAttendanceByEmployeeFromDB = async (
       page: page,
       limit: limit,
       totalData: total,
-      totalPages: Math.ceil(total / limit), 
+      totalPages: Math.ceil(total / limit),
     },
     data: result.rows,
   };
@@ -163,3 +172,7 @@ export const attendanceService = {
   checkoutFromDB,
   getAllAttendanceByEmployeeFromDB,
 };
+
+
+
+

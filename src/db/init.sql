@@ -11,7 +11,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status') THEN
         CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late', 'on_leave');
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'leave_status') THEN
+        CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
+    END IF;
 END $$;
+
 
 
 
@@ -53,14 +58,25 @@ CREATE TABLE IF NOT EXISTS attendance (
     status attendance_status DEFAULT 'present',
     UNIQUE(employee_id, date) 
 );
+-- CREATE TABLE IF NOT EXISTS leave_requests (
+--     id BIGSERIAL PRIMARY KEY,
+--     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+--     start_date DATE NOT NULL,
+--     end_date DATE NOT NULL,
+--     leave_type VARCHAR(50) DEFAULT 'sick',
+--     status VARCHAR(20) DEFAULT 'approved', 
+--     reason TEXT,
+--     UNIQUE(employee_id, start_date)
+-- );
 CREATE TABLE IF NOT EXISTS leave_requests (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    leave_type VARCHAR(50) NOT NULL, 
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    leave_type VARCHAR(50) DEFAULT 'sick',
-    status VARCHAR(20) DEFAULT 'approved', 
     reason TEXT,
+    status leave_status DEFAULT 'pending',
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(employee_id, start_date)
 );
 
@@ -86,3 +102,4 @@ CREATE TABLE IF NOT EXISTS offices (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+-- DROP TABLE IF EXISTS leave_requests;
