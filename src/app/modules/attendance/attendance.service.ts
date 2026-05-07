@@ -7,7 +7,6 @@ const markAttendance = async (
   lon: number,
   officeId: number, // Frontend will send this ID
 ) => {
- 
   const officeResult = await pool.query(
     "SELECT * FROM offices WHERE id = $1 AND is_active = TRUE",
     [officeId],
@@ -18,7 +17,6 @@ const markAttendance = async (
   }
 
   const office = officeResult.rows[0];
-
 
   const distance = getDistanceInMeters(
     lat,
@@ -42,7 +40,6 @@ const markAttendance = async (
   if (approvedLeave.rows.length > 0)
     throw new Error("You are officially on leave today.");
 
- 
   const checkToday = await pool.query(
     "SELECT * FROM attendance WHERE employee_id = $1 AND date = CURRENT_DATE",
     [employeeId],
@@ -50,17 +47,14 @@ const markAttendance = async (
   if (checkToday.rows.length > 0)
     throw new Error("Attendance already marked for today.");
 
-
   const now = new Date();
   const currentTime = now.toLocaleTimeString("en-GB"); // format: HH:mm:ss
-
 
   const [hours, minutes, seconds] = office.start_time.split(":");
   const threshold = new Date();
   threshold.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds));
 
   const status = now > threshold ? "late" : "present";
-
 
   const result = await pool.query(
     `INSERT INTO attendance (employee_id, office_id, check_in, status) 
@@ -72,9 +66,8 @@ const markAttendance = async (
 };
 
 const checkoutFromDB = async (employeeId: string, lat: number, lon: number) => {
- 
   const officeResult = await pool.query(
-    "SELECT * FROM offices WHERE is_active = TRUE LIMIT 1"
+    "SELECT * FROM offices WHERE is_active = TRUE LIMIT 1",
   );
 
   if (officeResult.rows.length === 0) {
@@ -87,16 +80,14 @@ const checkoutFromDB = async (employeeId: string, lat: number, lon: number) => {
     lat,
     lon,
     parseFloat(office.latitude),
-    parseFloat(office.longitude)
+    parseFloat(office.longitude),
   );
-
 
   if (distance > office.radius_meters) {
     throw new Error(
-      `Out of range. You are ${Math.round(distance)}m away from ${office.name}.`
+      `Out of range. You are ${Math.round(distance)}m away from ${office.name}.`,
     );
   }
-
 
   const attendanceRecord = await pool.query(
     "SELECT * FROM attendance WHERE employee_id = $1 AND date = CURRENT_DATE",
@@ -110,7 +101,6 @@ const checkoutFromDB = async (employeeId: string, lat: number, lon: number) => {
   if (attendanceRecord.rows[0].check_out) {
     throw new Error("You have already checked out for today.");
   }
-
 
   const currentTime = new Date().toLocaleTimeString("en-GB");
   const result = await pool.query(
@@ -131,11 +121,17 @@ const getAllAttendanceByEmployeeFromDB = async (
   page: number,
   limit: number,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) => {
   const offset = (page - 1) * limit;
-  const defaultStartDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  const defaultEndDate = new Date().toISOString().split('T')[0];
+  const defaultStartDate = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  )
+    .toISOString()
+    .split("T")[0];
+  const defaultEndDate = new Date().toISOString().split("T")[0];
 
   const start = startDate || defaultStartDate;
   const end = endDate || defaultEndDate;
@@ -167,12 +163,91 @@ const getAllAttendanceByEmployeeFromDB = async (
   };
 };
 
+const getAllAttendanceForAdminFromDB = async (
+  page: number,
+  limit: number,
+  searchTerm?: string,
+  startDate?: string,
+  endDate?: string,
+) => {
+  const offset = (page - 1) * limit;
+
+  const today = new Date().toISOString().split("T")[0];
+  const start = startDate || today;
+  const end = endDate || today;
+
+  let queryParams: any[] = [start, end, limit, offset];
+  let filterQuery = "";
+
+  if (searchTerm) {
+    filterQuery = `AND (u.name ILIKE $5 OR u.email ILIKE $5 OR a.employee_id::text = $5)`;
+    queryParams.push(`%${searchTerm}%`);
+  }
+
+  const dataQuery = `
+    SELECT 
+      a.*, 
+      u.name as employee_name,  -- users টেবিল থেকে নাম আসছে
+      u.email as employee_email, -- users টেবিল থেকে ইমেইল আসছে
+      o.name as office_name
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
+    JOIN users u ON e.user_id = u.id -- এখানে users টেবিল জয়েন করা হয়েছে
+    JOIN offices o ON a.office_id = o.id
+    WHERE a.date >= $1 AND a.date <= $2
+    ${filterQuery}
+    ORDER BY a.date DESC, a.check_in DESC
+    LIMIT $3 OFFSET $4
+  `;
+
+  const countQuery = `
+    SELECT COUNT(*) 
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
+    JOIN users u ON e.user_id = u.id -- কাউন্টেও জয়েন প্রয়োজন
+    WHERE a.date >= $1 AND a.date <= $2
+    ${filterQuery}
+  `;
+
+  const summaryQuery = `
+    SELECT 
+        COUNT(*) as total_records,
+        COUNT(CASE WHEN status = 'late' THEN 1 END) as total_late,
+        COUNT(CASE WHEN status = 'present' THEN 1 END) as total_on_time
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
+    JOIN users u ON e.user_id = u.id
+    WHERE a.date >= $1 AND a.date <= $2
+    ${filterQuery}
+  `;
+
+  //   const [result, totalCount] = await Promise.all([
+  //     pool.query(dataQuery, queryParams),
+  //     pool.query(countQuery, queryParams.slice(0, queryParams.length - 2))
+  //   ]);
+
+  const [result, totalCount, summaryResult] = await Promise.all([
+    pool.query(dataQuery, queryParams),
+    pool.query(countQuery, queryParams.slice(0, queryParams.length - 2)),
+    pool.query(summaryQuery, queryParams.slice(0, queryParams.length - 2)),
+  ]);
+
+  const total = parseInt(totalCount.rows[0].count);
+
+  return {
+    meta: {
+      page,
+      limit,
+      totalData: total,
+      totalPages: Math.ceil(total / limit),
+    },
+    summary: summaryResult.rows[0],
+    data: result.rows,
+  };
+};
 export const attendanceService = {
   markAttendance,
   checkoutFromDB,
   getAllAttendanceByEmployeeFromDB,
+  getAllAttendanceForAdminFromDB,
 };
-
-
-
-

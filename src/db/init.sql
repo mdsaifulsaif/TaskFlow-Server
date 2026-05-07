@@ -58,16 +58,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     status attendance_status DEFAULT 'present',
     UNIQUE(employee_id, date) 
 );
--- CREATE TABLE IF NOT EXISTS leave_requests (
---     id BIGSERIAL PRIMARY KEY,
---     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
---     start_date DATE NOT NULL,
---     end_date DATE NOT NULL,
---     leave_type VARCHAR(50) DEFAULT 'sick',
---     status VARCHAR(20) DEFAULT 'approved', 
---     reason TEXT,
---     UNIQUE(employee_id, start_date)
--- );
+
 CREATE TABLE IF NOT EXISTS leave_requests (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
@@ -103,3 +94,6 @@ CREATE TABLE IF NOT EXISTS offices (
 );
 
 -- DROP TABLE IF EXISTS leave_requests;
+--  UPDATE leave_requests
+-- SET status = 'approved'
+-- WHERE id = 2;
