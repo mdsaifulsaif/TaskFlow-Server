@@ -45,12 +45,23 @@ CREATE TABLE IF NOT EXISTS employees (
 
 CREATE TABLE IF NOT EXISTS attendance (
     id BIGSERIAL PRIMARY KEY,
-    employee_id UUID REFERENCES employees(id),
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    office_id INTEGER REFERENCES offices(id),
     date DATE DEFAULT CURRENT_DATE,
     check_in TIME,
     check_out TIME,
     status attendance_status DEFAULT 'present',
     UNIQUE(employee_id, date) 
+);
+CREATE TABLE IF NOT EXISTS leave_requests (
+    id BIGSERIAL PRIMARY KEY,
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    leave_type VARCHAR(50) DEFAULT 'sick',
+    status VARCHAR(20) DEFAULT 'approved', 
+    reason TEXT,
+    UNIQUE(employee_id, start_date)
 );
 
 CREATE TABLE IF NOT EXISTS payroll (
@@ -63,3 +74,15 @@ CREATE TABLE IF NOT EXISTS payroll (
     is_paid BOOLEAN DEFAULT false,
     paid_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS offices (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    radius_meters INTEGER DEFAULT 100, 
+    start_time TIME DEFAULT '09:00:00',
+    end_time TIME DEFAULT '17:00:00',
+    is_active BOOLEAN DEFAULT TRUE
+);
+

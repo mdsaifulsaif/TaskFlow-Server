@@ -1,63 +1,108 @@
 import { pool } from "../../../config/db";
 import { getDistanceInMeters } from "../../../utils/geoDistance";
 
-const OFFICE_LOCATION = { lat: 23.8103, lon: 90.4125 }; // Replace with your actual Office coordinates
+// const OFFICE_LOCATION = { lat: 23.8103, lon: 90.4125 };
 
-const markAttendance = async (employeeId: string, lat: number, lon: number) => {
-  // 1. Distance validation
+const markAttendance = async (
+  employeeId: string,
+  lat: number,
+  lon: number,
+  officeId: number, // Frontend will send this ID
+) => {
+ 
+  const officeResult = await pool.query(
+    "SELECT * FROM offices WHERE id = $1 AND is_active = TRUE",
+    [officeId],
+  );
+
+  if (officeResult.rows.length === 0) {
+    throw new Error("Selected office not found or is currently inactive.");
+  }
+
+  const office = officeResult.rows[0];
+
+
   const distance = getDistanceInMeters(
     lat,
     lon,
-    OFFICE_LOCATION.lat,
-    OFFICE_LOCATION.lon
+    parseFloat(office.latitude),
+    parseFloat(office.longitude),
   );
 
-  if (distance > 100) {
+  if (distance > office.radius_meters) {
     throw new Error(
-      `Out of range. You are ${Math.round(distance)} meters away from the office.`
+      `You are ${Math.round(distance)}m away. Range is ${office.radius_meters}m.`,
     );
   }
 
-  // 2. Check if already checked in today
+  const approvedLeave = await pool.query(
+    `SELECT * FROM leave_requests 
+     WHERE employee_id = $1 AND status = 'approved' 
+     AND CURRENT_DATE BETWEEN start_date AND end_date`,
+    [employeeId],
+  );
+  if (approvedLeave.rows.length > 0)
+    throw new Error("You are officially on leave today.");
+
+ 
   const checkToday = await pool.query(
     "SELECT * FROM attendance WHERE employee_id = $1 AND date = CURRENT_DATE",
-    [employeeId]
+    [employeeId],
   );
-
-  if (checkToday.rows.length > 0) {
+  if (checkToday.rows.length > 0)
     throw new Error("Attendance already marked for today.");
-  }
 
-  // 3. Insert record
-  const currentTime = new Date().toLocaleTimeString("en-GB"); // HH:mm:ss
+
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString("en-GB"); // format: HH:mm:ss
+
+
+  const [hours, minutes, seconds] = office.start_time.split(":");
+  const threshold = new Date();
+  threshold.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds));
+
+  const status = now > threshold ? "late" : "present";
+
+
   const result = await pool.query(
-    `INSERT INTO attendance (employee_id, check_in, status) 
-     VALUES ($1, $2, 'present') RETURNING *`,
-    [employeeId, currentTime]
+    `INSERT INTO attendance (employee_id, office_id, check_in, status) 
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [employeeId, officeId, currentTime, status],
   );
 
   return result.rows[0];
 };
 
 const checkoutFromDB = async (employeeId: string, lat: number, lon: number) => {
-  // 1. Distance validation
+ 
+  const officeResult = await pool.query(
+    "SELECT * FROM offices WHERE is_active = TRUE LIMIT 1"
+  );
+
+  if (officeResult.rows.length === 0) {
+    throw new Error("Office configuration not found.");
+  }
+
+  const office = officeResult.rows[0];
+
   const distance = getDistanceInMeters(
     lat,
     lon,
-    OFFICE_LOCATION.lat,
-    OFFICE_LOCATION.lon
+    parseFloat(office.latitude),
+    parseFloat(office.longitude)
   );
 
-  if (distance > 100) {
+
+  if (distance > office.radius_meters) {
     throw new Error(
-      `Out of range. You are ${Math.round(distance)} meters away to checkout.`
+      `Out of range. You are ${Math.round(distance)}m away from ${office.name}.`
     );
   }
 
-  // 2. Check if check-in exists and if already checked out
+
   const attendanceRecord = await pool.query(
     "SELECT * FROM attendance WHERE employee_id = $1 AND date = CURRENT_DATE",
-    [employeeId]
+    [employeeId],
   );
 
   if (attendanceRecord.rows.length === 0) {
@@ -68,54 +113,53 @@ const checkoutFromDB = async (employeeId: string, lat: number, lon: number) => {
     throw new Error("You have already checked out for today.");
   }
 
-  // 3. Update checkout time
+
   const currentTime = new Date().toLocaleTimeString("en-GB");
   const result = await pool.query(
     `UPDATE attendance 
      SET check_out = $1 
      WHERE employee_id = $2 AND date = CURRENT_DATE 
      RETURNING *`,
-    [currentTime, employeeId]
+    [currentTime, employeeId],
   );
 
   return result.rows[0];
 };
 
-const getAllAttendanceByEmployeeFromDB = async (employeeId: string, page: number, limit: number) => {
+// attendance.service.ts
+
+const getAllAttendanceByEmployeeFromDB = async (
+  employeeId: string,
+  page: number,
+  limit: number,
+) => {
   const offset = (page - 1) * limit;
 
-  // ১. নির্দিষ্ট এমপ্লয়ির ডাটা কুয়েরি করা (লেটেস্ট ডাটা আগে দেখাবে)
   const result = await pool.query(
-    `SELECT * FROM attendance 
-     WHERE employee_id = $1 
-     ORDER BY date DESC 
-     LIMIT $2 OFFSET $3`,
-    [employeeId, limit, offset]
+    `SELECT * FROM attendance WHERE employee_id = $1 ORDER BY date DESC LIMIT $2 OFFSET $3`,
+    [employeeId, limit, offset],
   );
 
-  // ২. টোটাল কয়টি রেকর্ড আছে তা বের করা (Pagination meta data এর জন্য)
   const totalResult = await pool.query(
     "SELECT COUNT(*) FROM attendance WHERE employee_id = $1",
-    [employeeId]
+    [employeeId],
   );
-  
+
   const total = parseInt(totalResult.rows[0].count);
 
   return {
     meta: {
-      page,
-      limit,
-      total,
-      totalPage: Math.ceil(total / limit),
+      page: page,
+      limit: limit,
+      totalData: total,
+      totalPages: Math.ceil(total / limit), 
     },
     data: result.rows,
   };
 };
 
-
-
 export const attendanceService = {
   markAttendance,
   checkoutFromDB,
-    getAllAttendanceByEmployeeFromDB,
+  getAllAttendanceByEmployeeFromDB,
 };
