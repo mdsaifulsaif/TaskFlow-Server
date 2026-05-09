@@ -5,6 +5,7 @@ import { DepartmentRoutes } from "../modules/department/department.route";
 import { attendanceRoute } from "../modules/attendance/attendance.routes";
 import { LeaveRoutes } from "../modules/leave/leave.routes";
 import { NoticeRoutes } from "../modules/notice/notice.routes";
+import { PayrollRoutes } from "../modules/payroll/payroll.routes";
 
 
 const router = Router();
@@ -33,6 +34,10 @@ const moduleRoutes = [
   {
     path: "/notice",
     route: NoticeRoutes,
+  },
+  {
+    path: "/payroll",
+    route: PayrollRoutes,
   },
 ];
 

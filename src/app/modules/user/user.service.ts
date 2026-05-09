@@ -4,6 +4,7 @@ import { pool } from "../../../config/db";
 import { generateAccessToken, generateRefreshToken } from "../../../utils/jwt";
 import { ApiError } from "../../../errors/ApiError";
 import { config } from "../../../config";
+import { TJwtPayload } from "../../../types/auth.type";
 
 export const registerUser = async (
   name: string,
@@ -40,34 +41,56 @@ export const registerUser = async (
   }
 };
 
+
+
+
 export const loginUser = async (email: string, password: string) => {
-  const user = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
 
-  if (user.rows.length === 0) {
-    throw new ApiError(401, "Invalid credentials");
+  const query = `
+    SELECT u.*, e.id as employee_id 
+    FROM users u 
+    LEFT JOIN employees e ON u.id = e.user_id 
+    WHERE u.email = $1
+  `;
+  
+  const result = await pool.query(query, [email]);
+  const user = result.rows[0];
+
+
+  if (!user) {
+    throw new ApiError(404, "এই ইমেইল দিয়ে কোনো ইউজার পাওয়া যায়নি।");
   }
 
-  const valid = await bcrypt.compare(password, user.rows[0].password);
 
-  if (!valid) {
-    throw new ApiError(401, "Invalid credentials");
+  const isPasswordMatch = await bcrypt.compare(password, user.password);
+  if (!isPasswordMatch) {
+    throw new ApiError(401, "ভুল পাসওয়ার্ড, আবার চেষ্টা করুন।");
   }
 
-  const payload = {
-    id: user.rows[0].id,
-    email: user.rows[0].email,
-    role: user.rows[0].role,
+  
+  const jwtPayload: TJwtPayload = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    employee_id: user.employee_id, 
   };
 
-  const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken(payload);
 
-  await pool.query("UPDATE users SET refresh_token=$1 WHERE id=$2", [
+  const accessToken = generateAccessToken(jwtPayload);
+  const refreshToken = generateRefreshToken(jwtPayload);
+
+
+  return {
+    accessToken,
     refreshToken,
-    user.rows[0].id,
-  ]);
-
-  return { accessToken, refreshToken };
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      employee_id: user.employee_id
+    }
+  };
 };
 
 export const refreshToken = async (token: string) => {

@@ -9,6 +9,6 @@ router.post("/login", UserController.login);
 router.post(
   '/refresh-token',
   refreshToken
-);
+);  
 
 export const UserRoute = router;

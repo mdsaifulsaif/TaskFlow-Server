@@ -118,3 +118,5 @@ CREATE TABLE IF NOT EXISTS notices (
 
 -- ALTER TABLE employees 
 -- ADD COLUMN office_id INTEGER REFERENCES offices(id);
+
+
