@@ -19,7 +19,6 @@ END $$;
 
 
 
-
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
@@ -92,6 +91,22 @@ CREATE TABLE IF NOT EXISTS offices (
     end_time TIME DEFAULT '17:00:00',
     is_active BOOLEAN DEFAULT TRUE
 );
+
+CREATE TABLE IF NOT EXISTS notices (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    priority VARCHAR(20) DEFAULT 'medium', 
+    target_audience VARCHAR(50) DEFAULT 'all',
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT true,
+    expires_at DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
 
 -- DROP TABLE IF EXISTS employees;
 -- DROP TABLE IF EXISTS attendance;
