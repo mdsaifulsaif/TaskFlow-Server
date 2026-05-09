@@ -23,6 +23,41 @@ const createDepartmentDB = async (payload: { name: string }) => {
   }
 };
 
+const getAllDepartmentDB = async (page: number, limit: number) => {
+  try {
+    const offset = (page - 1) * limit;
+
+    
+    const dataQuery = `
+      SELECT * FROM departments 
+      ORDER BY name ASC 
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `SELECT COUNT(*) FROM departments`;
+
+    const [result, totalCount] = await Promise.all([
+      pool.query(dataQuery, [limit, offset]),
+      pool.query(countQuery)
+    ]);
+
+    const total = parseInt(totalCount.rows[0].count);
+
+    return {
+      meta: {
+        page,
+        limit,
+        totalData: total,
+        totalPages: Math.ceil(total / limit),
+      },
+      data: result.rows,
+    };
+  } catch (error: any) {
+    throw new ApiError(500, error.message || "Failed to fetch departments");
+  }
+};
+
 export const DepartmentService = {
   createDepartmentDB,
+  getAllDepartmentDB,
 };

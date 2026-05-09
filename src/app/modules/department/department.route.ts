@@ -13,10 +13,10 @@ router.post(
 );
 
 
-// router.get(
-//   "/",
-//   auth,
-//   DepartmentController.getAllDepartments
-// );
+router.get(
+  "/",
+  auth,
+  departmentContoller.getDepartments
+);
 
 export const DepartmentRoutes = router;

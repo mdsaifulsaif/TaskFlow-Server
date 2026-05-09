@@ -32,8 +32,8 @@ const createEmployeeIntoDB = async (payload: any) => {
 
     //  Employees table a data insert
     const employeeInsertQuery = `
-      INSERT INTO employees (user_id, department_id, designation, phone, base_salary) 
-      VALUES ($1, $2, $3, $4, $5) 
+      INSERT INTO employees (user_id, department_id, designation, phone, base_salary, office_id) 
+      VALUES ($1, $2, $3, $4, $5, $6) 
       RETURNING *`;
 
     const newEmployee = await client.query(employeeInsertQuery, [
@@ -42,6 +42,7 @@ const createEmployeeIntoDB = async (payload: any) => {
       payload.designation,
       payload.phone,
       payload.base_salary,
+      payload.office_id
     ]);
 
     await client.query("COMMIT");

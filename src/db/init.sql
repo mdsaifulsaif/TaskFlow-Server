@@ -93,7 +93,13 @@ CREATE TABLE IF NOT EXISTS offices (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+-- DROP TABLE IF EXISTS employees;
+-- DROP TABLE IF EXISTS attendance;
 -- DROP TABLE IF EXISTS leave_requests;
+
 --  UPDATE leave_requests
 -- SET status = 'approved'
 -- WHERE id = 2;
+
+-- ALTER TABLE employees 
+-- ADD COLUMN office_id INTEGER REFERENCES offices(id);
