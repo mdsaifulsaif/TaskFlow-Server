@@ -34,35 +34,35 @@ const applyLeaveDB = async (
   return result.rows[0];
 };
 
-// // // এখানে status: string যোগ করা হয়েছে
+
 // const approveLeaveDB = async (leaveId: string, status: string) => {
 //   const client = await pool.connect();
-
 //   try {
 //     await client.query('BEGIN');
 
-//     // ১. স্ট্যাটাস আপডেট ($1 এ status এবং $2 এ leaveId যাবে)
-//     const updateQuery = `
-//       UPDATE leave_requests
-//       SET status = $1
-//       WHERE id = $2
-//       RETURNING *;
-//     `;
+//     // ১. ছুটি আপডেট করা (leave_requests table)
+//     const updateQuery = `UPDATE leave_requests SET status = $1 WHERE id = $2 RETURNING *;`;
 //     const leaveResult = await client.query(updateQuery, [status, leaveId]);
 //     const leave = leaveResult.rows[0];
 
 //     if (!leave) throw new ApiError(404, "Leave request not found");
 
-//     // ২. যদি অ্যাপ্রুভ হয়, তবে অ্যাটেনডেন্স টেবিলে এন্ট্রি
+//     // ২. অ্যাপ্রুভ হলে অ্যাটেনডেন্স টেবিলে ডাটা পাঠানো
 //     if (status === 'approved') {
-//       const attendanceQuery = `
-//         INSERT INTO attendance (employee_id, date, status)
-//         VALUES ($1, $2, 'on_leave')
-//         ON CONFLICT (employee_id, date)
-//         DO UPDATE SET status = 'on_leave';
-//       `;
+//       // এমপ্লয়ি টেবিল থেকে তার অফিস আইডি খুঁজে বের করা
+//       const employeeQuery = `SELECT office_id FROM employees WHERE id = $1`;
+//       const empResult = await client.query(employeeQuery, [leave.employee_id]);
+//       const officeId = empResult.rows[0]?.office_id;
 
-//       await client.query(attendanceQuery, [leave.employee_id, leave.start_date]);
+//       // এখন অ্যাটেনডেন্স টেবিলে office_id সহ ইনসার্ট করা
+//       const attendanceQuery = `
+//         INSERT INTO attendance (employee_id, office_id, date, status)
+//         VALUES ($1, $2, $3, 'on_leave')
+//         ON CONFLICT (employee_id, date) 
+//         DO UPDATE SET status = 'on_leave', office_id = EXCLUDED.office_id;
+//       `;
+      
+//       await client.query(attendanceQuery, [leave.employee_id, officeId, leave.start_date]);
 //     }
 
 //     await client.query('COMMIT');
@@ -80,33 +80,39 @@ const approveLeaveDB = async (leaveId: string, status: string) => {
   try {
     await client.query('BEGIN');
 
-    // ১. ছুটি আপডেট করা (leave_requests table)
-    const updateQuery = `UPDATE leave_requests SET status = $1 WHERE id = $2 RETURNING *;`;
-    const leaveResult = await client.query(updateQuery, [status, leaveId]);
-    const leave = leaveResult.rows[0];
+    // ১. লিভ রিকোয়েস্ট আপডেট করা
+    const updateResult = await client.query(
+      "UPDATE leave_requests SET status = $1 WHERE id = $2 RETURNING *",
+      [status, leaveId]
+    );
+    const leaveRequest = updateResult.rows[0];
 
-    if (!leave) throw new ApiError(404, "Leave request not found");
-
-    // ২. অ্যাপ্রুভ হলে অ্যাটেনডেন্স টেবিলে ডাটা পাঠানো
+    // ২. যদি স্ট্যাটাস 'approved' হয়, তবে অ্যাটেনডেন্স টেবিলে ডাটা ঢুকানো
     if (status === 'approved') {
-      // এমপ্লয়ি টেবিল থেকে তার অফিস আইডি খুঁজে বের করা
-      const employeeQuery = `SELECT office_id FROM employees WHERE id = $1`;
-      const empResult = await client.query(employeeQuery, [leave.employee_id]);
-      const officeId = empResult.rows[0]?.office_id;
-
-      // এখন অ্যাটেনডেন্স টেবিলে office_id সহ ইনসার্ট করা
-      const attendanceQuery = `
-        INSERT INTO attendance (employee_id, office_id, date, status)
-        VALUES ($1, $2, $3, 'on_leave')
-        ON CONFLICT (employee_id, date) 
-        DO UPDATE SET status = 'on_leave', office_id = EXCLUDED.office_id;
-      `;
+      const { employee_id, start_date, end_date } = leaveRequest;
       
-      await client.query(attendanceQuery, [leave.employee_id, officeId, leave.start_date]);
+      // শুরুর তারিখ থেকে শেষ তারিখ পর্যন্ত লুপ চালিয়ে প্রতিটা দিনের জন্য রো তৈরি
+      let currentDate = new Date(start_date);
+      const lastDate = new Date(end_date);
+
+      while (currentDate <= lastDate) {
+        const dateString = currentDate.toISOString().split('T')[0];
+
+        // অ্যাটেনডেন্স টেবিলে 'on_leave' হিসেবে ইনসার্ট (Conflict হলে ignore করবে)
+        await client.query(
+          `INSERT INTO attendance (employee_id, date, status) 
+           VALUES ($1, $2, 'on_leave')
+           ON CONFLICT (employee_id, date) DO NOTHING`,
+          [employee_id, dateString]
+        );
+
+        // একদিন যোগ করা
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
     }
 
     await client.query('COMMIT');
-    return leave;
+    return leaveRequest;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
