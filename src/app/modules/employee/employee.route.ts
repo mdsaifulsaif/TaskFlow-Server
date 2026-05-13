@@ -21,4 +21,18 @@ router.get(
   EmployeeController.getAllEmployee,
 );
 
+router.patch(
+  "/:id",
+  auth,
+  authorizeRole("admin"),
+  EmployeeController.updateEmployee
+);
+
+router.delete(
+  "/:id",
+  auth,
+  authorizeRole("admin"),
+  EmployeeController.deleteEmployee
+);
+
 export const employeeRoutes = router;

@@ -106,6 +106,17 @@ CREATE TABLE IF NOT EXISTS notices (
 );
 
 
+-- -- প্রথমে পুরনো কনস্ট্রেইন্ট ডিলিট করো
+-- ALTER TABLE attendance DROP CONSTRAINT attendance_employee_id_fkey;
+
+-- -- নতুন করে CASCADE সহ অ্যাড করো
+-- ALTER TABLE attendance 
+-- ADD CONSTRAINT attendance_employee_id_fkey 
+-- FOREIGN KEY (employee_id) 
+-- REFERENCES employees(id) 
+-- ON DELETE CASCADE;
+
+
 
 
 -- DROP TABLE IF EXISTS employees;
