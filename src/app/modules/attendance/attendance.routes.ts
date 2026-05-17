@@ -8,10 +8,20 @@ import {
 const router = Router();
 
 // POST: /api/v1/attendance (Check-in)
-router.post("/", attendanceController.markAttendance);
+router.post(
+  "/",
+  auth,
+  authorizeRole("employee", "admin", "hr"),
+  attendanceController.markAttendance,
+);
 
 // PATCH: /api/v1/attendance/checkout (Check-out)
-router.patch("/checkout", attendanceController.checkoutAttendance);
+router.patch(
+  "/checkout",
+  auth,
+  authorizeRole("employee", "admin", "hr"),
+  attendanceController.checkoutAttendance,
+);
 
 // GET: /api/v1/attendance/:employeeId
 router.get("/:employeeId", attendanceController.getMyAttendance);

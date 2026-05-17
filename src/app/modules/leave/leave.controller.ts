@@ -52,6 +52,42 @@ const updateLeaveStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+
+ const getAllLeaves = catchAsync(async (req: Request, res: Response) => {
+  const { 
+    employeeId, 
+    departmentId, 
+    status, 
+    startDate, 
+    endDate, 
+    page, 
+    limit 
+  } = req.query;
+
+  // tsconfig-এর exactOptionalPropertyTypes এরর ফিক্সিং স্ট্রাকচার
+  const filters = {
+    employeeId: employeeId ? String(employeeId) : undefined,
+    departmentId: departmentId ? String(departmentId) : undefined,
+    status: status ? (String(status) as 'pending' | 'approved' | 'rejected') : undefined,
+    startDate: startDate ? String(startDate) : undefined,
+    endDate: endDate ? String(endDate) : undefined,
+    page: page ? parseInt(String(page), 10) : 1,
+    limit: limit ? parseInt(String(limit), 10) : 10,
+  };
+
+ 
+  const result = await LeaveService.getActiveEmployeeLeavesDB(filters);
+
+  
+  sendResponse(res, 200, {
+    success: true,
+    message: "Leaves fetched successfully",
+    meta: result.meta,
+    data: result.leaves,
+  });
+});
+
 const getMyLeaves = async (req: Request, res: Response) => {
   try {
     const { employee_id } = req.params;
@@ -86,4 +122,5 @@ export const LeaveController = {
   applyLeave,
   getMyLeaves,
   updateLeaveStatus,
+  getAllLeaves
 };

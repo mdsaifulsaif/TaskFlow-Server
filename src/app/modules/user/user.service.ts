@@ -44,10 +44,66 @@ export const registerUser = async (
 
 
 
+// export const loginUser = async (email: string, password: string) => {
+
+//   const query = `
+//     SELECT u.*, e.id as employee_id 
+//     FROM users u 
+//     LEFT JOIN employees e ON u.id = e.user_id 
+//     WHERE u.email = $1
+//   `;
+  
+//   const result = await pool.query(query, [email]);
+//   const user = result.rows[0];
+
+
+//   if (!user) {
+//     throw new ApiError(404, "এই ইমেইল দিয়ে কোনো ইউজার পাওয়া যায়নি।");
+//   }
+
+
+//   const isPasswordMatch = await bcrypt.compare(password, user.password);
+//   if (!isPasswordMatch) {
+//     throw new ApiError(401, "ভুল পাসওয়ার্ড, আবার চেষ্টা করুন।");
+//   }
+
+  
+//   const jwtPayload: TJwtPayload = {
+//     id: user.id,
+//     email: user.email,
+//     role: user.role,
+//     employee_id: user.employee_id, 
+//     office_id: user.office_id
+//   };
+
+
+//   const accessToken = generateAccessToken(jwtPayload);
+//   const refreshToken = generateRefreshToken(jwtPayload);
+
+
+//   return {
+//     accessToken,
+//     refreshToken,
+//     user: {
+//       id: user.id,
+//       name: user.name,
+//       email: user.email,
+//       role: user.role,
+//       employee_id: user.employee_id,
+//       office_id: user.office_id
+//     }
+//   };
+// };
+
+
 export const loginUser = async (email: string, password: string) => {
 
+  // 🎯 ১. কুয়েরি আপডেট: e.office_id কেও সিলেক্ট করা হলো যাতে এটি এমপ্লয়ি টেবিল থেকে চলে আসে
   const query = `
-    SELECT u.*, e.id as employee_id 
+    SELECT 
+      u.*, 
+      e.id as employee_id,
+      e.office_id as office_id -- 👈 এমপ্লয়ি টেবিল থেকে অফিস আইডি আনা হলো
     FROM users u 
     LEFT JOIN employees e ON u.id = e.user_id 
     WHERE u.email = $1
@@ -56,29 +112,26 @@ export const loginUser = async (email: string, password: string) => {
   const result = await pool.query(query, [email]);
   const user = result.rows[0];
 
-
   if (!user) {
-    throw new ApiError(404, "এই ইমেইল দিয়ে কোনো ইউজার পাওয়া যায়নি।");
+    throw new ApiError(404, "এই ইমেইল দিয়ে কোনো ইউজার পাওয়া যায়নি।");
   }
-
 
   const isPasswordMatch = await bcrypt.compare(password, user.password);
   if (!isPasswordMatch) {
-    throw new ApiError(401, "ভুল পাসওয়ার্ড, আবার চেষ্টা করুন।");
+    throw new ApiError(401, "ভুল পাসওয়ার্ড, আবার চেষ্টা করুন।");
   }
 
-  
+  // 🎯 ২. পে-লোডে office_id পাস করা হচ্ছে (যা টোকেনের ভেতর মিডলওয়্যারে সরাসরি পাওয়া যাবে)
   const jwtPayload: TJwtPayload = {
     id: user.id,
     email: user.email,
     role: user.role,
     employee_id: user.employee_id, 
+    office_id: user.office_id // 👈 এটি এখন ডাটাবেজ থেকে পাওয়া যাবে
   };
-
 
   const accessToken = generateAccessToken(jwtPayload);
   const refreshToken = generateRefreshToken(jwtPayload);
-
 
   return {
     accessToken,
@@ -88,10 +141,13 @@ export const loginUser = async (email: string, password: string) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      employee_id: user.employee_id
+      employee_id: user.employee_id,
+      office_id: user.office_id // 👈 রেসপন্সেও ফ্রন্টএন্ডের জন্য পাঠানো হলো
     }
   };
 };
+
+
 
 export const refreshToken = async (token: string) => {
   // token verify kora

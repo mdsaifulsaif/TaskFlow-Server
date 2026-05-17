@@ -1,8 +1,9 @@
 export type TJwtPayload = {
-  id: string; 
+  id: string;
   email: string;
-  role: 'admin' | 'hr' | 'employee'; 
-  employee_id?: string | null; 
+  role: "admin" | "hr" | "employee";
+  employee_id?: string | null;
+  office_id?: string | null;
 };
 
 export type TAuthResponse = {

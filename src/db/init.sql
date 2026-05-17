@@ -131,3 +131,9 @@ CREATE TABLE IF NOT EXISTS notices (
 -- ADD COLUMN office_id INTEGER REFERENCES offices(id);
 
 
+-- ALTER TABLE offices 
+-- ADD COLUMN max_late_minutes INTEGER DEFAULT 120, -- Default 2 ghonta
+-- ADD COLUMN max_absent_minutes INTEGER DEFAULT 240; -- Default 4 ghonta
+
+
+ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'half_day';
