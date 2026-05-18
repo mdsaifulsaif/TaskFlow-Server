@@ -137,3 +137,9 @@ CREATE TABLE IF NOT EXISTS notices (
 
 
 -- ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'half_day';
+
+-- INSERT INTO attendance (employee_id, date, status, office_id) VALUES 
+-- ('11e7525b-5a93-488a-9f18-808facc491a0', '2026-05-15', 'absent', 1),
+-- ('11e7525b-5a93-488a-9f18-808facc491a0', '2026-05-16', 'absent', 1),
+-- ('11e7525b-5a93-488a-9f18-808facc491a0', '2026-05-17', 'absent', 1)
+-- ON CONFLICT DO NOTHING;
