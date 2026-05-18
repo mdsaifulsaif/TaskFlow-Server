@@ -136,4 +136,4 @@ CREATE TABLE IF NOT EXISTS notices (
 -- ADD COLUMN max_absent_minutes INTEGER DEFAULT 240; -- Default 4 ghonta
 
 
-ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'half_day';
+-- ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'half_day';

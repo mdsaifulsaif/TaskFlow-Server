@@ -10,7 +10,7 @@ interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     employee_id: string;
-    office_id: number | null; // অফিস আইডি নাম্বার বা নাল হতে পারে
+    office_id: number | null; 
   };
 }
 // ==========================================

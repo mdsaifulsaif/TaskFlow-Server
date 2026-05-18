@@ -84,10 +84,11 @@ const approveLeaveDB = async (leaveId: string, status: string) => {
 
 const getEmployeeLeavesDB = async (
   employee_id: string,
-  page: number = 1, // ২ নম্বর আর্গুমেন্ট
-  limit: number = 10, // ৩ নম্বর আর্গুমেন্ট
-  startDate?: string, // ৪ নম্বর আর্গুমেন্ট
-  endDate?: string, // ৫ নম্বর আর্গুমেন্ট
+  page: number = 1,
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  status?: string, // 🎯 ৬ নম্বর আর্গুমেন্ট হিসেবে রিসিভ করা হলো
 ) => {
   const offset = (page - 1) * limit;
 
@@ -102,23 +103,43 @@ const getEmployeeLeavesDB = async (
       .toISOString()
       .split("T")[0];
 
+  // 🛠️ ডাইনামিক কুয়েরি এবং প্যারামিটার অ্যারে তৈরি
+  let queryArgs = [employee_id, start, end];
+  let statusCondition = "";
+
+  // যদি স্ট্যাটাস পাঠানো হয় (যেমন: pending, approved, rejected)
+  if (status) {
+    queryArgs.push(status);
+    statusCondition = `AND status = $4`; // ৪ নম্বর পজিশনে স্ট্যাটাস বসবে
+  }
+
+  // LIMIT এবং OFFSET এর পজিশন ডাইনামিক করা
+  const limitIdx = queryArgs.length + 1;
+  const offsetIdx = queryArgs.length + 2;
+
   const dataQuery = `
     SELECT * FROM leave_requests 
     WHERE employee_id = $1 
     AND start_date >= $2 AND start_date <= $3
+    ${statusCondition}
     ORDER BY applied_at DESC
-    LIMIT $4 OFFSET $5
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
   `;
 
   const countQuery = `
     SELECT COUNT(*) FROM leave_requests 
     WHERE employee_id = $1 
     AND start_date >= $2 AND start_date <= $3
+    ${statusCondition}
   `;
 
+  // কুয়েরি এক্সিকিউট করার জন্য প্যারামিটার লিস্ট সাজানো
+  const dataArgs = [...queryArgs, limit, offset];
+  const countArgs = [...queryArgs];
+
   const [leaves, totalCount] = await Promise.all([
-    pool.query(dataQuery, [employee_id, start, end, limit, offset]),
-    pool.query(countQuery, [employee_id, start, end]),
+    pool.query(dataQuery, dataArgs),
+    pool.query(countQuery, countArgs),
   ]);
 
   const totalData = parseInt(totalCount.rows[0].count);
@@ -134,6 +155,7 @@ const getEmployeeLeavesDB = async (
     },
   };
 };
+
 const getActiveEmployeeLeavesDB = async (filters: FilterOptions = {}) => {
   const {
     employeeId,

@@ -4,20 +4,21 @@ import { sendResponse } from "../../../utils/sendResponse";
 import { ApiError } from "../../../errors/ApiError";
 import { catchAsync } from "../../../utils/catchAsync";
 
+
 const applyLeave = catchAsync(async (req: Request, res: Response) => {
   const { leave_type, start_date, end_date, reason } = req.body;
 
-  // আপনার ইউজার যদি লগইন করা থাকে, তবে req.user থেকে employee_id নিন
-  // আপাতত আপনার logic অনুযায়ী body থেকে নিচ্ছি
-  const { employee_id } = req.body;
 
+  const employee_id = (req as any).user?.employee_id;
+
+  //  Error: Missing fields
   if (!employee_id || !leave_type || !start_date || !end_date) {
-    throw new ApiError(400, "সবগুলো প্রয়োজনীয় তথ্য প্রদান করুন।");
+    throw new ApiError(400, "All required fields must be provided.");
   }
 
-  // তারিখ চেক করা (ঐচ্ছিক কিন্তু ভালো প্র্যাকটিস)
+  //  Error: Invalid Date Range
   if (new Date(start_date) > new Date(end_date)) {
-    throw new ApiError(400, "শুরুর তারিখ শেষ তারিখের চেয়ে বড় হতে পারে না।");
+    throw new ApiError(400, "Start date cannot be later than end date.");
   }
 
   const result = await LeaveService.applyLeaveDB(
@@ -30,10 +31,11 @@ const applyLeave = catchAsync(async (req: Request, res: Response) => {
 
   sendResponse(res, 201, {
     success: true,
-    message: "ছুটির আবেদনটি সফলভাবে জমা হয়েছে।",
+    message: "Leave application submitted successfully.",
     data: result,
   });
 });
+
 
 const updateLeaveStatus = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params; // leave_requests table id
@@ -88,6 +90,36 @@ const updateLeaveStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// const getMyLeaves = async (req: Request, res: Response) => {
+//   try {
+//     const { employee_id } = req.params;
+//     const page = parseInt(req.query.page as string) || 1;
+//     const limit = parseInt(req.query.limit as string) || 10;
+//     const startDate = req.query.startDate as string;
+//     const endDate = req.query.endDate as string;
+
+//     const { leaves, meta } = await LeaveService.getEmployeeLeavesDB(
+//       employee_id as string,
+//       page,
+//       limit,
+//       startDate,
+//       endDate,
+//     );
+
+//     sendResponse(res, 200, {
+//       success: true,
+//       message: "Leaves fetched successfully",
+//       meta,
+//       data: leaves,
+//     });
+//   } catch (error: any) {
+//     sendResponse(res, 500, {
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 const getMyLeaves = async (req: Request, res: Response) => {
   try {
     const { employee_id } = req.params;
@@ -95,6 +127,7 @@ const getMyLeaves = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
+    const status = req.query.status as string; // 🎯 এখানে status রিসিভ করুন
 
     const { leaves, meta } = await LeaveService.getEmployeeLeavesDB(
       employee_id as string,
@@ -102,6 +135,7 @@ const getMyLeaves = async (req: Request, res: Response) => {
       limit,
       startDate,
       endDate,
+      status, // 🎯 সার্ভিস ফাংশনে পাস করে দেওয়া হলো
     );
 
     sendResponse(res, 200, {
