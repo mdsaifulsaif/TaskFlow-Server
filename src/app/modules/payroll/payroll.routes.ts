@@ -25,3 +25,11 @@ router.get("/", PayrollController.getAllPayrolls);
 // router.get("/my-salary", auth('employee'), PayrollController.getMyPayroll);
 
 export const PayrollRoutes = router;
+
+
+
+
+// {
+//   "month": "May 2026",
+//   "bonus": 5000
+// }

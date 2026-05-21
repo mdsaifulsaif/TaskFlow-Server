@@ -143,3 +143,36 @@ CREATE TABLE IF NOT EXISTS notices (
 -- ('11e7525b-5a93-488a-9f18-808facc491a0', '2026-05-16', 'absent', 1),
 -- ('11e7525b-5a93-488a-9f18-808facc491a0', '2026-05-17', 'absent', 1)
 -- ON CONFLICT DO NOTHING;
+
+
+
+-- for paryroll
+-- INSERT INTO users (id, name, email, password, role) VALUES
+-- ('11111111-1111-1111-1111-111111111111', 'Zayan Ahmed', 'zayan@gmail.com', 'hashedpassword', 'employee'),
+-- ('22222222-2222-2222-2222-222222222222', 'Tasnim Rahman', 'tasnim@gmail.com', 'hashedpassword', 'employee'),
+-- ('33333333-3333-3333-3333-333333333333', 'Arif Hasan', 'arif@gmail.com', 'hashedpassword', 'employee')
+-- ON CONFLICT DO NOTHING;
+
+
+-- INSERT INTO employees (id, user_id, designation, base_salary, join_date) VALUES
+-- ('11111111-2222-3333-4444-555555555555', '11111111-1111-1111-1111-111111111111', 'Frontend Developer', 30000.00, '2026-01-01'),
+-- ('22222222-3333-4444-5555-666666666666', '22222222-2222-2222-2222-222222222222', 'UI/UX Designer', 45000.00, '2026-01-01'),
+-- ('33333333-4444-5555-6666-777777777777', '33333333-3333-3333-3333-333333333333', 'SQA Engineer', 60000.00, '2026-01-01')
+-- ON CONFLICT DO NOTHING;
+
+
+-- INSERT INTO attendance (employee_id, date, status) VALUES
+-- -- Tasnim Rahman -> ২ দিন সম্পূর্ণ absent
+-- ('22222222-3333-4444-5555-666666666666', '2026-05-10', 'absent'),
+-- ('22222222-3333-4444-5555-666666666666', '2026-05-11', 'absent'),
+
+-- -- Arif Hasan -> ১ দিন absent + ২ দিন half_day
+-- ('33333333-4444-5555-6666-777777777777', '2026-05-12', 'absent'),
+-- ('33333333-4444-5555-6666-777777777777', '2026-05-13', 'half_day'),
+-- ('33333333-4444-5555-6666-777777777777', '2026-05-14', 'half_day')
+-- ON CONFLICT DO NOTHING;
+
+-- TRUNCATE TABLE payroll RESTART IDENTITY;
+
+
+-- ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'half_day';
