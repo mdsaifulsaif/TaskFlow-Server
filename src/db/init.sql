@@ -182,8 +182,133 @@
 
 
 
+-- -- =========================================================================
+-- -- ১. ENUM TYPES INITIALIZATION (সব টেবিলের আগে এনাম তৈরি হতে হবে)
+-- -- =========================================================================
+-- DO $$ 
+-- BEGIN
+--     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+--         CREATE TYPE user_role AS ENUM ('admin', 'hr', 'employee');
+--     END IF;
+    
+--     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'leave_status') THEN
+--         CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
+--     END IF;
+    
+--     -- 🎯 এখানে 'half_day' একবারে যুক্ত করে দেওয়া হলো
+--     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status') THEN
+--         CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late', 'half_day', 'on_leave');
+--     END IF;
+-- END $$;
+
+-- -- =========================================================================
+-- -- ২. INDEPENDENT TABLES (যে টেবিলগুলো কারো ওপর নির্ভরশীল না)
+-- -- =========================================================================
+
+-- -- উজার টেবিল
+-- CREATE TABLE IF NOT EXISTS users (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     name VARCHAR(100) NOT NULL,
+--     email VARCHAR(100) UNIQUE NOT NULL,
+--     password VARCHAR(255) NOT NULL,
+--     role user_role DEFAULT 'employee',
+--     refresh_token TEXT, 
+--     is_active BOOLEAN DEFAULT true,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- -- ডিপার্টমেন্ট টেবিল
+-- CREATE TABLE IF NOT EXISTS departments ( 
+--     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+--     name VARCHAR(255) NOT NULL
+-- );
+
+-- -- অফিস টেবিল (🎯 এটাকে উপরে নিয়ে আসা হয়েছে, কারণ এমপ্লয়ি টেবিল একে রেফারেন্স করবে)
+-- CREATE TABLE IF NOT EXISTS offices (
+--     id SERIAL PRIMARY KEY,
+--     name VARCHAR(255) NOT NULL,
+--     latitude DECIMAL(10, 8) NOT NULL,
+--     longitude DECIMAL(11, 8) NOT NULL,
+--     radius_meters INTEGER DEFAULT 100, 
+--     start_time TIME DEFAULT '09:00:00',
+--     end_time TIME DEFAULT '17:00:00',
+--     max_late_minutes INTEGER DEFAULT 120,   -- 🎯 পলিসি কলাম একবারে যুক্ত
+--     max_absent_minutes INTEGER DEFAULT 240, -- 🎯 পলিসি কলাম একবারে যুক্ত
+--     is_active BOOLEAN DEFAULT TRUE
+-- );
+
+-- -- =========================================================================
+-- -- ৩. DEPENDENT TABLES (যে টেবিলগুলো উপরের টেবিলগুলোর ওপর নির্ভরশীল)
+-- -- =========================================================================
+
+-- -- এমপ্লয়ি টেবিল (এখন সেফলি users, departments, এবং offices তিনটার আইডিই চেনে)
+-- CREATE TABLE IF NOT EXISTS employees (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+--     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL, -- 🎯 পারফেক্টলি ইন্টিগ্রেটেড
+--     designation VARCHAR(100),
+--     phone VARCHAR(20),
+--     base_salary DECIMAL(12, 2) NOT NULL,
+--     join_date DATE DEFAULT CURRENT_DATE,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- -- অ্যাটেনডেন্স টেবিল
+-- CREATE TABLE IF NOT EXISTS attendance (
+--     id BIGSERIAL PRIMARY KEY,
+--     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+--     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL,
+--     date DATE DEFAULT CURRENT_DATE,
+--     check_in TIME,
+--     check_out TIME,
+--     status attendance_status DEFAULT 'present',
+--     UNIQUE(employee_id, date) 
+-- );
+
+-- -- লিভ রিকোয়েস্ট টেবিল
+-- CREATE TABLE IF NOT EXISTS leave_requests (
+--     id BIGSERIAL PRIMARY KEY,
+--     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+--     leave_type VARCHAR(50) NOT NULL, 
+--     start_date DATE NOT NULL,
+--     end_date DATE NOT NULL,
+--     reason TEXT,
+--     status leave_status DEFAULT 'pending',
+--     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     UNIQUE(employee_id, start_date)
+-- );
+
+-- -- পে-রোল টেবিল
+-- CREATE TABLE IF NOT EXISTS payroll (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE, -- 🎯 এখানেও ক্যাসকেড দেওয়া সেফ
+--     month VARCHAR(20), 
+--     bonus DECIMAL(10, 2) DEFAULT 0,
+--     deduction DECIMAL(10, 2) DEFAULT 0,
+--     total_payable DECIMAL(12, 2) NOT NULL,
+--     is_paid BOOLEAN DEFAULT false,
+--     paid_at TIMESTAMP
+-- );
+
+-- -- নোটিশ টেবিল
+-- CREATE TABLE IF NOT EXISTS notices (
+--     id BIGSERIAL PRIMARY KEY,
+--     title VARCHAR(255) NOT NULL,
+--     content TEXT NOT NULL,
+--     priority VARCHAR(20) DEFAULT 'medium', 
+--     target_audience VARCHAR(50) DEFAULT 'all',
+--     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+--     is_active BOOLEAN DEFAULT true,
+--     expires_at DATE,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
+
+
+
 -- =========================================================================
--- ১. ENUM TYPES INITIALIZATION (সব টেবিলের আগে এনাম তৈরি হতে হবে)
+-- ১. ENUM TYPES
 -- =========================================================================
 DO $$ 
 BEGIN
@@ -195,67 +320,61 @@ BEGIN
         CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
     END IF;
     
-    -- 🎯 এখানে 'half_day' একবারে যুক্ত করে দেওয়া হলো
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status') THEN
         CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late', 'half_day', 'on_leave');
     END IF;
 END $$;
 
 -- =========================================================================
--- ২. INDEPENDENT TABLES (যে টেবিলগুলো কারো ওপর নির্ভরশীল না)
+-- ২. TABLES
 -- =========================================================================
 
--- উজার টেবিল
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role user_role DEFAULT 'employee',
-    refresh_token TEXT, 
+    refresh_token TEXT,
     is_active BOOLEAN DEFAULT true,
+    is_deleted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ডিপার্টমেন্ট টেবিল
-CREATE TABLE IF NOT EXISTS departments ( 
+CREATE TABLE departments ( 
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    is_deleted BOOLEAN DEFAULT false
 );
 
--- অফিস টেবিল (🎯 এটাকে উপরে নিয়ে আসা হয়েছে, কারণ এমপ্লয়ি টেবিল একে রেফারেন্স করবে)
-CREATE TABLE IF NOT EXISTS offices (
+CREATE TABLE offices (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     latitude DECIMAL(10, 8) NOT NULL,
     longitude DECIMAL(11, 8) NOT NULL,
-    radius_meters INTEGER DEFAULT 100, 
+    radius_meters INTEGER DEFAULT 100,
     start_time TIME DEFAULT '09:00:00',
     end_time TIME DEFAULT '17:00:00',
-    max_late_minutes INTEGER DEFAULT 120,   -- 🎯 পলিসি কলাম একবারে যুক্ত
-    max_absent_minutes INTEGER DEFAULT 240, -- 🎯 পলিসি কলাম একবারে যুক্ত
-    is_active BOOLEAN DEFAULT TRUE
+    max_late_minutes INTEGER DEFAULT 120,
+    max_absent_minutes INTEGER DEFAULT 240,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT false
 );
 
--- =========================================================================
--- ৩. DEPENDENT TABLES (যে টেবিলগুলো উপরের টেবিলগুলোর ওপর নির্ভরশীল)
--- =========================================================================
-
--- এমপ্লয়ি টেবিল (এখন সেফলি users, departments, এবং offices তিনটার আইডিই চেনে)
-CREATE TABLE IF NOT EXISTS employees (
+CREATE TABLE employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
-    office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL, -- 🎯 পারফেক্টলি ইন্টিগ্রেটেড
+    office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL,
     designation VARCHAR(100),
     phone VARCHAR(20),
     base_salary DECIMAL(12, 2) NOT NULL,
     join_date DATE DEFAULT CURRENT_DATE,
+    is_deleted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- অ্যাটেনডেন্স টেবিল
-CREATE TABLE IF NOT EXISTS attendance (
+CREATE TABLE attendance (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL,
@@ -263,44 +382,60 @@ CREATE TABLE IF NOT EXISTS attendance (
     check_in TIME,
     check_out TIME,
     status attendance_status DEFAULT 'present',
-    UNIQUE(employee_id, date) 
+    is_deleted BOOLEAN DEFAULT false,
+    UNIQUE(employee_id, date)
 );
 
--- লিভ রিকোয়েস্ট টেবিল
-CREATE TABLE IF NOT EXISTS leave_requests (
+CREATE TABLE leave_requests (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
-    leave_type VARCHAR(50) NOT NULL, 
+    leave_type VARCHAR(50) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     reason TEXT,
     status leave_status DEFAULT 'pending',
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT false,
     UNIQUE(employee_id, start_date)
 );
 
--- পে-রোল টেবিল
-CREATE TABLE IF NOT EXISTS payroll (
+CREATE TABLE payroll (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE, -- 🎯 এখানেও ক্যাসকেড দেওয়া সেফ
-    month VARCHAR(20), 
+    employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+    month VARCHAR(20),
     bonus DECIMAL(10, 2) DEFAULT 0,
     deduction DECIMAL(10, 2) DEFAULT 0,
     total_payable DECIMAL(12, 2) NOT NULL,
     is_paid BOOLEAN DEFAULT false,
-    paid_at TIMESTAMP
+    paid_at TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT false
 );
 
--- নোটিশ টেবিল
-CREATE TABLE IF NOT EXISTS notices (
+CREATE TABLE notices (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    priority VARCHAR(20) DEFAULT 'medium', 
+    priority VARCHAR(20) DEFAULT 'medium',
     target_audience VARCHAR(50) DEFAULT 'all',
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
     expires_at DATE,
+    is_deleted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =========================================================================
+-- ৩. INDEXES
+-- =========================================================================
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_is_deleted ON users(is_deleted);
+CREATE INDEX idx_employees_user_id ON employees(user_id);
+CREATE INDEX idx_employees_is_deleted ON employees(is_deleted);
+CREATE INDEX idx_attendance_employee_id ON attendance(employee_id);
+CREATE INDEX idx_attendance_date ON attendance(date);
+
+-- =========================================================================
+-- ৪. সাকসেস মেসেজ
+-- =========================================================================
+SELECT '✅ Database reset and recreated successfully!' AS status;
