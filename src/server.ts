@@ -26,7 +26,7 @@ io.on("connection", (socket: any) => {
   console.log(`🔌 Success: A user connected to Socket! ID: ${socket.id}`);
   
   socket.on("disconnect", () => {
-    console.log("❌ User disconnected from Socket");
+    console.log(" User disconnected from Socket");
   });
 });
 

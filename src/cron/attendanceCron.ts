@@ -164,6 +164,11 @@
 //   console.log(" Cron Jobs Initialized: 23:59 (Absent Auto-Mark) & 00:00 (3-Day Absence Mail Check)");
 // };
 
+
+
+
+
+
 import cron from "node-cron";
 import nodemailer from "nodemailer";
 import { pool } from "../config/db";
@@ -171,84 +176,117 @@ import { pool } from "../config/db";
 const emailTransporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 2525, // 🎯 আপনার আইএসপি-র ব্লক বাইপাস করার জন্য ২৫২৫ পোর্ট
-  secure: false, // ২৫২৫ পোর্টের জন্য এটি সবসময় false হবে
+  secure: false, // ২৫২৫ পোর্টের জন্য এটি সবসময় false হবে
   auth: {
     user: process.env.GMAIL_APP_NAME,
     pass: process.env.GMAIL_APP_PASS,
   },
   tls: {
-    rejectUnauthorized: false, // সেলফ-সাইনড সার্টিফিকেট বা ডকার নেটওয়ার্কিং প্রবলেম এড়াতে
+    rejectUnauthorized: false, // সেলফ-সাইনড সার্টিফিকেট বা ডকার নেটওয়ার্কিং প্রবলেম এড়াতে
   },
 });
 export default emailTransporter;
 
 export const initAttendanceCron = async () => {
-  console.log("🚀 Attendance Cron Job Initialized with Local Mailpit!");
+  console.log("🚀 Attendance Cron Job Initialized successfully!");
 
-  // 🧪 টেস্ট ১: প্রতি মিনিটে রান হবে এবং অনুপস্থিতদের 'absent' মার্ক করবে
-  cron.schedule("* * * * *", async () => {
+  // 🕒 ক্রন ১: প্রতিদিন রাত ১১:৫৯ মিনিটে রান হবে এবং অনুপস্থিতদের 'absent' মার্ক করবে
+  cron.schedule("59 23 * * *", async () => {
     const today = new Date().toISOString().split("T")[0];
+    console.log(`⏳ [Cron 1] Running absent marker for date: ${today}`);
+    
     try {
+      // 🎯 সুরক্ষার জন্য ডাটাবেজ থেকে যেকোনো ১টি সচল অফিস আইডি খোঁজা হচ্ছে (Foreign key error এড়াতে)
+      const officeRes = await pool.query("SELECT id FROM offices LIMIT 1");
+      const defaultOfficeId = officeRes.rows.length > 0 ? officeRes.rows[0].id : null;
+
+      if (!defaultOfficeId) {
+        console.error("❌ [Cron 1] Error: No office found in 'offices' table. Cannot insert attendance.");
+        return;
+      }
+
       const query = `
         INSERT INTO attendance (employee_id, date, status, office_id)
-        SELECT e.id, $1, 'absent', COALESCE(e.office_id, 1)
+        SELECT e.id, $1, 'absent', COALESCE(e.office_id, $2)
         FROM employees e
         JOIN users u ON e.user_id = u.id
         LEFT JOIN attendance a ON e.id = a.employee_id AND a.date = $1
-        WHERE a.id IS NULL AND u.is_deleted = FALSE AND e.join_date <= $1
+        WHERE a.id IS NULL 
+          AND u.is_deleted = FALSE 
+          AND e.join_date <= $1
       `;
-      const result = await pool.query(query, [today]);
-      console.log(
-        `🧪 [Test Cron 1] Marked ${result.rowCount} employees as absent.`,
-      );
+      
+      const result = await pool.query(query, [today, defaultOfficeId]);
+      console.log(`✅ [Cron 1] Success! Marked ${result.rowCount} employees as absent.`);
     } catch (error) {
-      console.error("Cron 1 Error:", error);
+      console.error("❌ [Cron 1] Error:", error);
     }
   });
 
-  // 🧪 টেস্ট ২: প্রতি মিনিটে রান হবে এবং টানা ৩ দিন absent থাকলে মেইল পাঠাবে
-  cron.schedule("*/1 * * * *", async () => {
-    console.log("🧪 [Test Cron 2] Checking for 3 days of absence...");
+  // 🕒 ক্রন ২: প্রতিদিন রাত ১২:০০ টায় (পরের দিন শুরুতে) রান হবে এবং টানা ৩ দিন absent থাকলে মেইল পাঠাবে
+  cron.schedule("0 0 * * *", async () => {
+    console.log("⏳ [Cron 2] Checking for consecutive 3 days of absence...");
 
     try {
+      // 🎯 নিখুঁত SQL উইন্ডো ফাংশন লজিক যা শুধুমাত্র "টানা ৩ দিন" অনুপস্থিত থাকলে ফিল্টার করবে
       const consecutiveQuery = `
-        WITH absent_counts AS (
-          SELECT employee_id, COUNT(*) as absent_days
+        WITH ordered_attendance AS (
+          SELECT 
+            employee_id, 
+            date, 
+            status,
+            date - (ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY date))::int AS grp
           FROM attendance
           WHERE status = 'absent'
-          GROUP BY employee_id
+        ),
+        consecutive_groups AS (
+          SELECT 
+            employee_id, 
+            COUNT(*) as consecutive_days
+          FROM ordered_attendance
+          GROUP BY employee_id, grp
+          HAVING COUNT(*) >= 3
         )
-        SELECT e.id as employee_id, u.email, u.name 
-        FROM absent_counts ac
-        JOIN employees e ON ac.employee_id = e.id
+        SELECT DISTINCT e.id as employee_id, u.email, u.name 
+        FROM consecutive_groups cg
+        JOIN employees e ON cg.employee_id = e.id
         JOIN users u ON e.user_id = u.id
-        WHERE ac.absent_days >= 3;
+        WHERE u.is_deleted = FALSE;
       `;
 
       const result = await pool.query(consecutiveQuery);
       const absentees = result.rows;
 
       if (absentees.length === 0) {
-        console.log("🧪 [Test Cron 2] No employees with >= 3 absences found.");
+        console.log("ℹ️ [Cron 2] No employees with 3 consecutive absences found today.");
         return;
       }
 
       for (const employee of absentees) {
+        // যদি ইমেইল সেট করা না থাকে তবে স্কিপ করবে
+        if (!employee.email) continue;
+
         const mailOptions = {
-          from: `"HR System" <hr@yourcompany.com>`,
+          from: `"HR System" <${process.env.GMAIL_APP_NAME}>`, // জিমেইল সিকিউরিটি পলিসির জন্য
           to: employee.email,
-          subject: "⚠️ 3 Days Absence Warning Notice",
-          html: `<h3>Hello ${employee.name}, You have been absent for 3 or more days!</h3>`,
+          subject: "⚠️ 3 Days Consecutive Absence Warning Notice",
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #dc2626;">Attendance Warning Notice</h2>
+              <p>Hello <strong>${employee.name}</strong>,</p>
+              <p>Our records indicate that you have been absent from work for <strong>3 consecutive days</strong> without any prior approval.</p>
+              <p>Please contact the HR department or your supervisor immediately to clarify your status.</p>
+              <br/>
+              <p>Best regards,<br/>HR Operations Team</p>
+            </div>
+          `,
         };
 
-        // লোকাল মেইলপিটে মেইল সেন্ড করা হচ্ছে
         await emailTransporter.sendMail(mailOptions);
-        console.log(
-          `✉️ [Mailpit] Warning mail sent successfully to: ${employee.name} (${employee.email})`,
-        );
+        console.log(`✉️ Warning mail sent successfully to: ${employee.name} (${employee.email})`);
       }
     } catch (error) {
-      console.error("❌ Cron 2 Error:", error);
+      console.error("❌ [Cron 2] Error:", error);
     }
   });
 };
