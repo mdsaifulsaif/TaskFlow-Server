@@ -329,7 +329,7 @@ END $$;
 -- ২. TABLES
 -- =========================================================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -341,13 +341,13 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE departments ( 
+CREATE TABLE IF NOT EXISTS departments ( 
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     is_deleted BOOLEAN DEFAULT false
 );
 
-CREATE TABLE offices (
+CREATE TABLE IF NOT EXISTS offices (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     latitude DECIMAL(10, 8) NOT NULL,
@@ -361,20 +361,20 @@ CREATE TABLE offices (
     is_deleted BOOLEAN DEFAULT false
 );
 
-CREATE TABLE employees (
+CREATE TABLE IF NOT EXISTS employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL,
     designation VARCHAR(100),
     phone VARCHAR(20),
-    base_salary DECIMAL(12, 2) NOT NULL,
+    base_salary DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     join_date DATE DEFAULT CURRENT_DATE,
     is_deleted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE attendance (
+CREATE TABLE IF NOT EXISTS attendance (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL,
@@ -386,7 +386,7 @@ CREATE TABLE attendance (
     UNIQUE(employee_id, date)
 );
 
-CREATE TABLE leave_requests (
+CREATE TABLE IF NOT EXISTS leave_requests (
     id BIGSERIAL PRIMARY KEY,
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     leave_type VARCHAR(50) NOT NULL,
@@ -399,7 +399,7 @@ CREATE TABLE leave_requests (
     UNIQUE(employee_id, start_date)
 );
 
-CREATE TABLE payroll (
+CREATE TABLE IF NOT EXISTS payroll (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     month VARCHAR(20),
@@ -411,7 +411,7 @@ CREATE TABLE payroll (
     is_deleted BOOLEAN DEFAULT false
 );
 
-CREATE TABLE notices (
+CREATE TABLE IF NOT EXISTS notices (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -428,12 +428,12 @@ CREATE TABLE notices (
 -- =========================================================================
 -- ৩. INDEXES
 -- =========================================================================
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_is_deleted ON users(is_deleted);
-CREATE INDEX idx_employees_user_id ON employees(user_id);
-CREATE INDEX idx_employees_is_deleted ON employees(is_deleted);
-CREATE INDEX idx_attendance_employee_id ON attendance(employee_id);
-CREATE INDEX idx_attendance_date ON attendance(date);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_is_deleted ON users(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_employees_user_id ON employees(user_id);
+CREATE INDEX IF NOT EXISTS idx_employees_is_deleted ON employees(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_attendance_employee_id ON attendance(employee_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
 
 -- =========================================================================
 -- ৪. সাকসেস মেসেজ

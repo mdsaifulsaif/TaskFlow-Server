@@ -274,7 +274,7 @@ const getAllAttendanceForAdminFromDB = async (
     FROM attendance a
     JOIN employees e ON a.employee_id = e.id
     JOIN users u ON e.user_id = u.id
-    JOIN offices o ON a.office_id = o.id
+    LEFT JOIN offices o ON a.office_id = o.id
     WHERE a.date >= $1 AND a.date <= $2
     ${filterQuery}
     ORDER BY a.date DESC, a.check_in DESC

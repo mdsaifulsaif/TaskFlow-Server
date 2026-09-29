@@ -250,8 +250,11 @@ const getAllPayrollDB = async (filters: {
   const queryParams: any[] = [];
   let whereClauses: string[] = [];
 
-  if (employeeId) {
-    queryParams.push(employeeId);
+  const isValidUUID = (uuid: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid.trim());
+
+  if (employeeId && employeeId.trim() !== "" && isValidUUID(employeeId)) {
+    queryParams.push(employeeId.trim());
     whereClauses.push(`p.employee_id = $${queryParams.length}`);
   }
 

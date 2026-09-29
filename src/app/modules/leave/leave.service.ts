@@ -174,14 +174,17 @@ const getActiveEmployeeLeavesDB = async (filters: FilterOptions = {}) => {
   const queryParams: any[] = [];
   let paramIndex = 1;
 
-  if (employeeId) {
+  const isValidUUID = (uuid: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid.trim());
+
+  if (employeeId && employeeId.trim() !== "" && isValidUUID(employeeId)) {
     queryConditions.push(`e.id = $${paramIndex++}`);
-    queryParams.push(employeeId);
+    queryParams.push(employeeId.trim());
   }
 
-  if (departmentId) {
+  if (departmentId && departmentId.trim() !== "" && isValidUUID(departmentId)) {
     queryConditions.push(`e.department_id = $${paramIndex++}`);
-    queryParams.push(departmentId);
+    queryParams.push(departmentId.trim());
   }
 
   if (status) {

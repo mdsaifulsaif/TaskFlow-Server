@@ -29,7 +29,10 @@ export const initDB = async () => {
   try {
     const client = await pool.connect();
     console.log("🐘 Database connected successfully");
-    const sqlFilePath = path.join(__dirname, "../db/init.sql");
+    let sqlFilePath = path.join(__dirname, "../db/init.sql");
+    if (!fs.existsSync(sqlFilePath)) {
+      sqlFilePath = path.join(process.cwd(), "src/db/init.sql");
+    }
     
     const initSql = fs.readFileSync(sqlFilePath, "utf8");
 
